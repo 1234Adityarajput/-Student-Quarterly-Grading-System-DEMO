@@ -1,6 +1,8 @@
 <?php
 class DBConnection {
-    protected $db;
+    protected $db = null;
+    public $connect_error = '';
+    public $connect_errno = 0;
 
     function __construct() {
         $host = 'localhost';
@@ -77,38 +79,54 @@ class DBConnection {
             define('BASE_URL', rtrim(getenv('BASE_URL'), '/'));
         }
 
+        // Disable mysqli throwing exceptions in PHP 8.1+ so we handle errors gracefully
+        mysqli_report(MYSQLI_REPORT_OFF);
+
         // Initialize mysqli instance
-        $this->db = mysqli_init();
-        if (!$this->db) {
-            die("mysqli_init failed: PHP MySQLi extension initialization error.");
+        $mysqli = mysqli_init();
+        if (!$mysqli) {
+            $this->connect_error = "mysqli_init failed: PHP MySQLi extension initialization error.";
+            $this->connect_errno = 1;
+            return;
         }
 
-        // Set connect timeout to 10 seconds
-        $this->db->options(MYSQLI_OPT_CONNECT_TIMEOUT, 10);
+        // Set connect timeout to 6 seconds
+        $mysqli->options(MYSQLI_OPT_CONNECT_TIMEOUT, 6);
 
-        // Connect with SSL flag for cloud databases like Aiven
-        if ($use_ssl) {
-            $this->db->ssl_set(NULL, NULL, NULL, NULL, NULL);
-            $flags = MYSQLI_CLIENT_SSL;
-            if (defined('MYSQLI_CLIENT_SSL_DONT_VERIFY_SERVER_CERT')) {
-                $flags |= MYSQLI_CLIENT_SSL_DONT_VERIFY_SERVER_CERT;
+        $connected = false;
+        $caught_error = '';
+        try {
+            if ($use_ssl) {
+                $mysqli->ssl_set(NULL, NULL, NULL, NULL, NULL);
+                $flags = MYSQLI_CLIENT_SSL;
+                if (defined('MYSQLI_CLIENT_SSL_DONT_VERIFY_SERVER_CERT')) {
+                    $flags |= MYSQLI_CLIENT_SSL_DONT_VERIFY_SERVER_CERT;
+                }
+                $connected = @$mysqli->real_connect($host, $user, $password, $dbname, (int)$port, NULL, $flags);
+            } else {
+                $connected = @$mysqli->real_connect($host, $user, $password, $dbname, (int)$port);
             }
-            @$this->db->real_connect($host, $user, $password, $dbname, (int)$port, NULL, $flags);
-        } else {
-            @$this->db->real_connect($host, $user, $password, $dbname, (int)$port);
+        } catch (Throwable $e) {
+            $connected = false;
+            $caught_error = $e->getMessage();
         }
 
-        // Handle connection failure gracefully
-        if ($this->db->connect_errno) {
+        if ($connected && !$mysqli->connect_errno) {
+            $this->db = $mysqli;
+        } else {
+            $this->connect_errno = $mysqli->connect_errno ?: 2002;
+            $this->connect_error = $mysqli->connect_error ?: ($caught_error ?: "Target host {$host}:{$port} refused connection or unreachable.");
+            $this->db = null;
+
+            // Only terminate on authenticated dashboard index.php if DB is dead
             $current_script = basename($_SERVER['PHP_SELF'] ?? '');
-            // Do not terminate if db_setup.php is loading, let db_setup.php present its UI
-            if ($current_script !== 'db_setup.php') {
-                $err_msg = "Database Connection Failed (" . $this->db->connect_errno . "): " . $this->db->connect_error;
+            if ($current_script === 'index.php') {
+                $err_display = "Database Connection Notice (" . $this->connect_errno . "): " . $this->connect_error;
                 die("<!DOCTYPE html>
 <html lang='en'>
 <head>
     <meta charset='UTF-8'>
-    <title>Database Connection Error</title>
+    <title>Database Connection Notice</title>
     <link rel='stylesheet' href='css/bootstrap.min.css'>
 </head>
 <body class='bg-light py-5'>
@@ -118,12 +136,12 @@ class DBConnection {
                 <h4 class='mb-0'>Database Connection Notice</h4>
             </div>
             <div class='card-body'>
-                <p class='lead text-danger font-monospace'><strong>" . htmlspecialchars($err_msg) . "</strong></p>
+                <p class='lead text-danger font-monospace'><strong>" . htmlspecialchars($err_display) . "</strong></p>
                 <hr>
-                <p>Database server tak connection establish nahi ho paya. Please verify karein:</p>
+                <p>Database server se connection establish nahi ho paya. Please verify karein:</p>
                 <ul>
                     <li>Render Environment Variables: <code>DB_SERVER</code>, <code>DB_PORT</code>, <code>DB_USERNAME</code>, <code>DB_PASSWORD</code>, <code>DB_NAME</code>, <code>DB_SSL</code>.</li>
-                    <li>Aiven Cloud console me service <strong>RUNNING</strong> state me ho.</li>
+                    <li>Aiven Cloud console me MySQL service <strong>RUNNING</strong> state me ho.</li>
                 </ul>
                 <div class='d-flex gap-2 mt-4'>
                     <a href='db_setup.php' class='btn btn-primary'>Open 1-Click Database Setup (db_setup.php)</a>

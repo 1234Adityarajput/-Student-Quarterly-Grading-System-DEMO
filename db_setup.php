@@ -84,25 +84,34 @@ function get_db_credentials() {
 
 // Function to establish connection
 function connect_db($creds) {
+    mysqli_report(MYSQLI_REPORT_OFF);
     $mysqli = mysqli_init();
     if (!$mysqli) {
         return [null, "mysqli_init failed. Check PHP MySQLi extension."];
     }
     $mysqli->options(MYSQLI_OPT_CONNECT_TIMEOUT, 6);
 
-    if ($creds['ssl']) {
-        $mysqli->ssl_set(NULL, NULL, NULL, NULL, NULL);
-        $flags = MYSQLI_CLIENT_SSL;
-        if (defined('MYSQLI_CLIENT_SSL_DONT_VERIFY_SERVER_CERT')) {
-            $flags |= MYSQLI_CLIENT_SSL_DONT_VERIFY_SERVER_CERT;
+    $connected = false;
+    $caught_err = '';
+    try {
+        if ($creds['ssl']) {
+            $mysqli->ssl_set(NULL, NULL, NULL, NULL, NULL);
+            $flags = MYSQLI_CLIENT_SSL;
+            if (defined('MYSQLI_CLIENT_SSL_DONT_VERIFY_SERVER_CERT')) {
+                $flags |= MYSQLI_CLIENT_SSL_DONT_VERIFY_SERVER_CERT;
+            }
+            $connected = @$mysqli->real_connect($creds['host'], $creds['user'], $creds['pass'], $creds['name'], (int)$creds['port'], NULL, $flags);
+        } else {
+            $connected = @$mysqli->real_connect($creds['host'], $creds['user'], $creds['pass'], $creds['name'], (int)$creds['port']);
         }
-        $connected = @$mysqli->real_connect($creds['host'], $creds['user'], $creds['pass'], $creds['name'], (int)$creds['port'], NULL, $flags);
-    } else {
-        $connected = @$mysqli->real_connect($creds['host'], $creds['user'], $creds['pass'], $creds['name'], (int)$creds['port']);
+    } catch (Throwable $e) {
+        $connected = false;
+        $caught_err = $e->getMessage();
     }
 
-    if (!$connected) {
-        return [null, "Error (" . $mysqli->connect_errno . "): " . $mysqli->connect_error];
+    if (!$connected || $mysqli->connect_errno) {
+        $err_msg = $mysqli->connect_error ?: ($caught_err ?: "Connection refused or host unreachable ({$creds['host']}:{$creds['port']})");
+        return [null, "Error (" . ($mysqli->connect_errno ?: 2002) . "): " . $err_msg];
     }
     return [$mysqli, ""];
 }
