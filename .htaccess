@@ -1,0 +1,28 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Reverse proxy trailing slash fix:
+    # If a directory is requested without a trailing slash, redirect with slash without appending internal port
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteCond %{REQUEST_URI} !(.*)/$
+    RewriteRule ^(.*)$ $1/ [R=301,L]
+
+    # Normalize HTTPS when terminated at Render/Cloudflare proxy
+    RewriteCond %{HTTP:X-Forwarded-Proto} =https
+    RewriteRule ^ - [E=HTTPS:on]
+</IfModule>
+
+# Strip internal port header if forwarded by reverse proxy
+<IfModule mod_headers.c>
+    Header always unset X-Forwarded-Port
+</IfModule>
+
+# Security: prevent direct browser access to SQL dumps and backup files
+<FilesMatch "(\.sql|\.original)$">
+    Require all denied
+</FilesMatch>
+
+# Allow database installer access
+<Files "db_setup.php">
+    Require all granted
+</Files>

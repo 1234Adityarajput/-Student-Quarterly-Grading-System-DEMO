@@ -1,0 +1,7 @@
+# Ignore duplicate nested folder
+Student-Quarterly-Grading-System-main/
+
+# System and logs
+.system_generated/
+*.log
+.env
