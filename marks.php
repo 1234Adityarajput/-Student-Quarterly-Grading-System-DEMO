@@ -11,12 +11,16 @@
                         <select name="class_id" id="class_id" class="form-select form-select-sm select2 rounded-0" required>
                             <option <?php echo (!isset($class_id)) ? 'selected' : '' ?> disabled>Please Select Here</option>
                             <?php
-                            $class_qry = $conn->query("SELECT c.*, CONCAT(s.name , ' ' , c.grade , ' - ' , c.section) as class FROM `class_list` c inner join `subjects` s on c.subject_id = s.subject_id order by `class` asc");
-                            while($row= $class_qry->fetch_assoc()):
-                                $class[$row['class_id']] = $row['class'];
+                            $class_qry = $conn ? $conn->query("SELECT c.*, CONCAT(s.name , ' ' , c.grade , ' - ' , c.section) as class FROM `class_list` c inner join `subjects` s on c.subject_id = s.subject_id order by `class` asc") : false;
+                            if($class_qry && $class_qry instanceof mysqli_result):
+                                while($row= $class_qry->fetch_assoc()):
+                                    $class[$row['class_id']] = $row['class'];
                             ?>
                                 <option <?php echo isset($_GET['class_id']) && $_GET['class_id'] == $row['class_id'] ? "selected" : '' ?> value="<?php echo $row['class_id'] ?>"><?php echo $row['class'] ?></option>
-                            <?php endwhile; ?>
+                            <?php 
+                                endwhile; 
+                            endif;
+                            ?>
                         </select>
                     </div>
                     <div class="form-group col-md-4">
@@ -24,14 +28,18 @@
                         <select name="assessment_id" id="assessment_id" class="form-select form-select-sm select2 rounded-0" required>
                             <option <?php echo (!isset($assessment_id)) ? 'selected' : '' ?> disabled>Please Select Here</option>
                             <?php
-                            $dept_qry = $conn->query("SELECT * FROM assessment_list order by quarter asc, `name` asc");
+                            $dept_qry = $conn ? $conn->query("SELECT * FROM assessment_list order by quarter asc, `name` asc") : false;
                             $quarter = array('','First','Second','Third','Fourth');
-                            while($row= $dept_qry->fetch_assoc()):
-                                $assess_quarter[$row['assessment_id']] = $quarter[$row['quarter']];
-                                $assess[$row['assessment_id']] = $row;
+                            if($dept_qry && $dept_qry instanceof mysqli_result):
+                                while($row= $dept_qry->fetch_assoc()):
+                                    $assess_quarter[$row['assessment_id']] = $quarter[$row['quarter']];
+                                    $assess[$row['assessment_id']] = $row;
                             ?>
                                 <option style="display:none" value="<?php echo $row['assessment_id'] ?>" data-class="<?php echo $row['class_id'] ?>" class="item" <?php echo isset($_GET['assessment_id']) && $_GET['assessment_id'] == $row['assessment_id'] ? "selected" : '' ?>><?php echo $quarter[$row['quarter']].' - '.$row['name'] ?></option>
-                            <?php endwhile; ?>
+                            <?php 
+                                endwhile; 
+                            endif;
+                            ?>
                         </select>
                     </div>
                     <div class="form-group col-md-4">
@@ -83,13 +91,18 @@
                             </thead>
                             <tbody>
                                 <?php 
-                                    $marks_qry = $conn->query("SELECT * FROM `mark_list` where assessment_id='{$_GET['assessment_id']}'");
+                                    $aid = isset($_GET['assessment_id']) ? (int)$_GET['assessment_id'] : 0;
+                                    $cid = isset($_GET['class_id']) ? (int)$_GET['class_id'] : 0;
+                                    $marks_qry = $conn ? $conn->query("SELECT * FROM `mark_list` where assessment_id='{$aid}'") : false;
                                     $marks = array();
-                                    while($row = $marks_qry->fetch_assoc()){
-                                        $marks[$row['student_id']] = $row['mark'];
+                                    if($marks_qry && $marks_qry instanceof mysqli_result){
+                                        while($row = $marks_qry->fetch_assoc()){
+                                            $marks[$row['student_id']] = $row['mark'];
+                                        }
                                     }
-                                    $student = $conn->query("SELECT * FROM `student_list` where class_id = '{$_GET['class_id']}' order by `name` asc");
-                                    while($row = $student->fetch_assoc()):
+                                    $student = $conn ? $conn->query("SELECT * FROM `student_list` where class_id = '{$cid}' order by `name` asc") : false;
+                                    if($student && $student instanceof mysqli_result):
+                                        while($row = $student->fetch_assoc()):
                                 ?>
                                 <tr>
                                     <td class="px-1py-0">
@@ -100,8 +113,11 @@
                                     <input type="number" step="any" class="form-control form-control-sm rounded-0 w-100 text-end" name="mark[]" value="<?php echo (isset($marks[$row['student_id']])) ? $marks[$row['student_id']] : 0 ?>" required>
                                     </td>
                                 </tr>
-                                <?php endwhile; ?>
-                                <?php if($student->num_rows <= 0): ?>
+                                <?php 
+                                        endwhile; 
+                                    endif;
+                                ?>
+                                <?php if(!$student || !($student instanceof mysqli_result) || $student->num_rows <= 0): ?>
                                 <tr><th colspan="2"><center><i><b>No Student listed yet.</b></i></center></th></tr>
                                 <?php endif; ?>
                             </tbody>

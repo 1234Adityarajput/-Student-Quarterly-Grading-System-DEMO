@@ -24,9 +24,10 @@
             </thead>
             <tbody>
                 <?php 
-                $sql = "SELECT c.*, CONCAT(c.grade , ' - ' , c.section) as grade_section,s.name FROM `class_list` c inner join `subjects` s on c.subject_id = s.subject_id where c.delete_flag = 0 order by CONCAT(c.grade , ' - ' , c.section) asc";
-                $qry = $conn->query($sql);
+                $sql = "SELECT c.*, CONCAT(c.grade , ' - ' , c.section) as grade_section, s.name FROM `class_list` c inner join `subjects` s on c.subject_id = s.subject_id where c.delete_flag = 0 order by CONCAT(c.grade , ' - ' , c.section) asc";
+                $qry = $conn ? $conn->query($sql) : false;
                 $i = 1;
+                if($qry && $qry instanceof mysqli_result):
                     while($row = $qry->fetch_assoc()):
                 ?>
                 <tr>
@@ -45,7 +46,13 @@
                         </div>
                     </td>
                 </tr>
-                <?php endwhile; ?>
+                <?php 
+                    endwhile; 
+                endif;
+                if(!$qry || !($qry instanceof mysqli_result) || $qry->num_rows <= 0):
+                ?>
+                <tr><td colspan="4" class="text-center py-2 text-muted"><em>No Class listed yet.</em></td></tr>
+                <?php endif; ?>
                
             </tbody>
         </table>

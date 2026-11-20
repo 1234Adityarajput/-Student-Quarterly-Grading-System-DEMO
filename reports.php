@@ -11,12 +11,16 @@
                         <select name="class_id" id="class_id" class="form-select form-select-sm select2 rounded-0" required>
                             <option <?php echo (!isset($class_id)) ? 'selected' : '' ?> disabled>Please Select Here</option>
                             <?php
-                            $class_qry = $conn->query("SELECT c.*, CONCAT(s.name , ' ' , c.grade , ' - ' , c.section) as class,s.name as sname,CONCAT(c.grade , ' - ' , c.section) as grade_sec FROM `class_list` c inner join `subjects` s on c.subject_id = s.subject_id order by `class` asc");
-                            while($row= $class_qry->fetch_assoc()):
-                                $class[$row['class_id']] = $row;
+                            $class_qry = $conn ? $conn->query("SELECT c.*, CONCAT(s.name , ' ' , c.grade , ' - ' , c.section) as class,s.name as sname,CONCAT(c.grade , ' - ' , c.section) as grade_sec FROM `class_list` c inner join `subjects` s on c.subject_id = s.subject_id order by `class` asc") : false;
+                            if($class_qry && $class_qry instanceof mysqli_result):
+                                while($row= $class_qry->fetch_assoc()):
+                                    $class[$row['class_id']] = $row;
                             ?>
                                 <option <?php echo isset($_GET['class_id']) && $_GET['class_id'] == $row['class_id'] ? "selected" : '' ?> value="<?php echo $row['class_id'] ?>"><?php echo $row['class'] ?></option>
-                            <?php endwhile; ?>
+                            <?php 
+                                endwhile; 
+                            endif;
+                            ?>
                         </select>
                     </div>
                     <div class="form-group col-md-4">
@@ -71,46 +75,61 @@
                         <div class="col-md-12 py-3 w-100 overflow-auto justify-content-center">
                             <?php 
                             $components = array();
-                            $components_query=$conn->query("SELECT c.*,g.name FROM `component_subject_percentage` c inner join `grading_components` g on c.component_id = g.component_id where c.subject_id = '{$class[$_GET['class_id']]['subject_id']}' order by component_id asc ");
-                            while($row = $components_query->fetch_assoc()){
-                                $components[$row['component_id']] = $row;
+                            $subj_id = isset($class[$_GET['class_id']]['subject_id']) ? (int)$class[$_GET['class_id']]['subject_id'] : 0;
+                            $components_query = $conn ? $conn->query("SELECT c.*,g.name FROM `component_subject_percentage` c inner join `grading_components` g on c.component_id = g.component_id where c.subject_id = '{$subj_id}' order by c.component_id asc ") : false;
+                            if($components_query && $components_query instanceof mysqli_result){
+                                while($row = $components_query->fetch_assoc()){
+                                    $components[$row['component_id']] = $row;
+                                }
                             }
                             $assess = array();
                             $assess_ids = array();
-                            $assess_query=$conn->query("SELECT * FROM `assessment_list` where class_id = '{$_GET['class_id']}' and quarter = '{$_GET['quarter']}' order by `name` asc ");
-                            while($row = $assess_query->fetch_assoc()){
-                                $assess[$row['component_id']][$row['assessment_id']] = $row;
-                                $assess_ids[] = $row['assessment_id'];
+                            $cid = (int)$_GET['class_id'];
+                            $qid = (int)$_GET['quarter'];
+                            $assess_query = $conn ? $conn->query("SELECT * FROM `assessment_list` where class_id = '{$cid}' and quarter = '{$qid}' order by `name` asc ") : false;
+                            if($assess_query && $assess_query instanceof mysqli_result){
+                                while($row = $assess_query->fetch_assoc()){
+                                    $assess[$row['component_id']][$row['assessment_id']] = $row;
+                                    $assess_ids[] = (int)$row['assessment_id'];
+                                }
                             }
-                            $a_ids = implode(",",$assess_ids);
+                            $a_ids = !empty($assess_ids) ? implode(",",$assess_ids) : '0';
                             $marks = array();
                             $students = array();
-                            $marks_qry = $conn->query("SELECT * FROM `mark_list`  where assessment_id in ({$a_ids}) ");
-                            while($row = $marks_qry->fetch_assoc()){
-                                $marks[$row['student_id']][$row['assessment_id']] = $row['mark'];
+                            $marks_qry = $conn ? $conn->query("SELECT * FROM `mark_list` where assessment_id in ({$a_ids}) ") : false;
+                            if($marks_qry && $marks_qry instanceof mysqli_result){
+                                while($row = $marks_qry->fetch_assoc()){
+                                    $marks[$row['student_id']][$row['assessment_id']] = $row['mark'];
+                                }
                             }
-                            $student_query = $conn->query("SELECT * FROM student_list where class_id = '{$_GET['class_id']}' order by name asc");
-                            while($row = $student_query->fetch_assoc()){
-                                $students[$row['student_id']] = $row['name'];
+                            $student_query = $conn ? $conn->query("SELECT * FROM student_list where class_id = '{$cid}' order by name asc") : false;
+                            if($student_query && $student_query instanceof mysqli_result){
+                                while($row = $student_query->fetch_assoc()){
+                                    $students[$row['student_id']] = $row['name'];
+                                }
                             }
                             $c_perc_arr = array();
                             foreach($components as $row){
                                 $c_perc_arr[$row['component_id']] =( $row['percentage']/100);
                             }
-                            $transmutaion_query = $conn->query("SELECT * FROM transmutation_table");
+                            $transmutaion_query = $conn ? $conn->query("SELECT * FROM transmutation_table") : false;
                             $trans_tbl = array();
-                            while($row = $transmutaion_query->fetch_assoc()){
-                                $trans_tbl[$row['trans_id']] = $row;
-                            }
-                            function transmute($grade = 0){
-                                global $trans_tbl;
-                                $transmuted = 0;
-                                foreach($trans_tbl as $row){
-                                    if($row['from'] <= $grade && $grade <= $row['to']){
-                                        $transmuted = $row['grade'];
-                                    }
+                            if($transmutaion_query && $transmutaion_query instanceof mysqli_result){
+                                while($row = $transmutaion_query->fetch_assoc()){
+                                    $trans_tbl[$row['trans_id']] = $row;
                                 }
-                                return $transmuted;
+                            }
+                            if(!function_exists('transmute')){
+                                function transmute($grade = 0){
+                                    global $trans_tbl;
+                                    $transmuted = 0;
+                                    foreach($trans_tbl as $row){
+                                        if($row['from'] <= $grade && $grade <= $row['to']){
+                                            $transmuted = $row['grade'];
+                                        }
+                                    }
+                                    return $transmuted;
+                                }
                             }
                             ?>
                             <table class="table table-striped table-hover table-bordered w-auto">

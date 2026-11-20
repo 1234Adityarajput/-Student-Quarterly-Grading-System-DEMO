@@ -21,11 +21,15 @@ if($qry && $qry instanceof mysqli_result && ($row = $qry->fetch_array())){
                         <select name="subject_id" id="subject_id" class="form-select form-select-sm rounded-0 select2" required>
                             <option <?php echo (!isset($subject_id)) ? 'selected' : '' ?> disabled>Please Select Here</option>
                             <?php
-                            $subj_qry = $conn->query("SELECT * FROM subjects where delete_flag = 0 ".(isset($subject_id) ? " or subject_id = '{$subject_id}' " : "")." order by `name` asc");
-                            while($row= $subj_qry->fetch_assoc()):
+                            $subj_qry = $conn ? $conn->query("SELECT * FROM subjects where delete_flag = 0 ".(isset($subject_id) ? " or subject_id = '{$subject_id}' " : "")." order by `name` asc") : false;
+                            if($subj_qry && $subj_qry instanceof mysqli_result):
+                                while($row= $subj_qry->fetch_assoc()):
                             ?>
                                 <option value="<?php echo $row['subject_id'] ?>" <?php echo (isset($subject_id) && $subject_id == $row['subject_id'] ) ? 'selected' : '' ?>><?php echo $row['name'] ?></option>
-                            <?php endwhile; ?>
+                            <?php 
+                                endwhile; 
+                            endif;
+                            ?>
                         </select>
                     </div>
                     <div class="form-group">

@@ -25,8 +25,9 @@
             <tbody>
                 <?php 
                 $sql = "SELECT * FROM `admin_list` where admin_id != 1 order by `fullname` asc";
-                $qry = $conn->query($sql);
+                $qry = $conn ? $conn->query($sql) : false;
                 $i = 1;
+                if($qry && $qry instanceof mysqli_result):
                     while($row = $qry->fetch_assoc()):
                 ?>
                 <tr>
@@ -45,8 +46,11 @@
                         </div>
                     </th>
                 </tr>
-                <?php endwhile; ?>
-                <?php if($qry->num_rows <= 0): ?>
+                <?php 
+                    endwhile; 
+                endif;
+                ?>
+                <?php if(!$qry || !($qry instanceof mysqli_result) || $qry->num_rows <= 0): ?>
                     <tr>
                         <th class="text-center p-0" colspan="5">No data display.</th>
                     </tr>

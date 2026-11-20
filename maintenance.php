@@ -19,8 +19,9 @@
                     <div class="h-100 overflow-auto border rounded-1 border-dark">
                         <ul class="list-group">
                             <?php 
-                            $dept_qry = $conn->query("SELECT * FROM `grading_components` where delete_flag = 0 order by `name` asc");
-                            while($row = $dept_qry->fetch_assoc()):
+                            $dept_qry = $conn ? $conn->query("SELECT * FROM `grading_components` where delete_flag = 0 order by `name` asc") : false;
+                            if($dept_qry && $dept_qry instanceof mysqli_result):
+                                while($row = $dept_qry->fetch_assoc()):
                             ?>
                             <li class="list-group-item d-flex">
                                 <div class="col-auto flex-grow-1">
@@ -31,8 +32,11 @@
                                     <a href="javascript:void(0)" class="delete_component btn btn-sm btn-danger bg-gradient py-0 px-1" title="Delete component" data-id="<?php echo $row['component_id'] ?>"  data-name="<?php echo $row['name'] ?>"><span class="fa fa-trash"></span></a>
                                 </div>
                             </li>
-                            <?php endwhile; ?>
-                            <?php if($dept_qry->num_rows <= 0): ?>
+                            <?php 
+                                endwhile; 
+                            endif;
+                            ?>
+                            <?php if(!$dept_qry || !($dept_qry instanceof mysqli_result) || $dept_qry->num_rows <= 0): ?>
                                 <li class="list-group-item text-center">No data listed yet.</li>
                             <?php endif; ?>
                         </ul>
@@ -48,8 +52,9 @@
                     <div class="h-100 overflow-auto border rounded-1 border-dark">
                         <ul class="list-group">
                             <?php 
-                            $dept_qry = $conn->query("SELECT * FROM `subjects` where delete_flag = 0 order by `name` asc");
-                            while($row = $dept_qry->fetch_assoc()):
+                            $dept_qry2 = $conn ? $conn->query("SELECT * FROM `subjects` where delete_flag = 0 order by `name` asc") : false;
+                            if($dept_qry2 && $dept_qry2 instanceof mysqli_result):
+                                while($row = $dept_qry2->fetch_assoc()):
                             ?>
                             <li class="list-group-item d-flex">
                                 <div class="col-auto flex-grow-1">
@@ -63,8 +68,11 @@
                                     <a href="javascript:void(0)" class="delete_subject btn btn-sm btn-danger bg-gradient py-0 px-1" title="Delete subject" data-id="<?php echo $row['subject_id'] ?>"  data-name="<?php echo $row['name'] ?>"><span class="fa fa-trash"></span></a>
                                 </div>
                             </li>
-                            <?php endwhile; ?>
-                            <?php if($dept_qry->num_rows <= 0): ?>
+                            <?php 
+                                endwhile; 
+                            endif;
+                            ?>
+                            <?php if(!$dept_qry2 || !($dept_qry2 instanceof mysqli_result) || $dept_qry2->num_rows <= 0): ?>
                                 <li class="list-group-item text-center">No data listed yet.</li>
                             <?php endif; ?>
                         </ul>

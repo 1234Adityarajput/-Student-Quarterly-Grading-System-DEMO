@@ -30,9 +30,10 @@
             </thead>
             <tbody>
                 <?php 
-                $sql = "SELECT a.*, CONCAT(s.name , ' ' , c.grade , ' - ' , c.section) as class, cc.name as component FROM `assessment_list` a inner join `class_list` c on a.class_id = c.class_id inner join `subjects` s on c.subject_id = s.subject_id inner join `grading_components` cc on a.component_id = cc.component_id order by class asc, component asc, quarter asc, `name` asc, hps asc ";
-                $qry = $conn->query($sql);
+                $sql = "SELECT a.*, CONCAT(s.name , ' ' , c.grade , ' - ' , c.section) as class, cc.name as component FROM `assessment_list` a inner join `class_list` c on a.class_id = c.class_id inner join `subjects` s on c.subject_id = s.subject_id inner join `grading_components` cc on a.component_id = cc.component_id order by class asc, component asc, quarter asc, a.name asc, hps asc ";
+                $qry = $conn ? $conn->query($sql) : false;
                 $i = 1;
+                if($qry && $qry instanceof mysqli_result):
                     while($row = $qry->fetch_assoc()):
                 ?>
                 <tr>
@@ -71,7 +72,13 @@
                         </div>
                     </td>
                 </tr>
-                <?php endwhile; ?>
+                <?php 
+                    endwhile; 
+                endif;
+                if(!$qry || !($qry instanceof mysqli_result) || $qry->num_rows <= 0):
+                ?>
+                <tr><td colspan="7" class="text-center py-2 text-muted"><em>No Assessments listed yet.</em></td></tr>
+                <?php endif; ?>
                
             </tbody>
         </table>

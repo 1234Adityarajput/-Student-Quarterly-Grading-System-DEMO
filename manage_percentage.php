@@ -27,10 +27,11 @@ if($qry && $qry instanceof mysqli_result){
             </thead>
             <tbody>
                 <?php 
-                $component = $conn->query("SELECT * FROM `grading_components` where delete_flag = 0 order by component_id asc");
+                $component = $conn ? $conn->query("SELECT * FROM `grading_components` where delete_flag = 0 order by component_id asc") : false;
                 $total = 0;
-                while($row = $component->fetch_assoc()):
-                    $total += isset($data[$row['component_id']]) ? $data[$row['component_id']] : 0;
+                if($component && $component instanceof mysqli_result):
+                    while($row = $component->fetch_assoc()):
+                        $total += isset($data[$row['component_id']]) ? $data[$row['component_id']] : 0;
                 ?>
                 <tr>
                     <td class="py-0 px-1"><input type="hidden" name="component_id[]" value='<?php echo $row['component_id'] ?>'><?php echo $row['name'] ?></td>
@@ -38,7 +39,10 @@ if($qry && $qry instanceof mysqli_result){
                         <input type="number" step="any" class="form-control form-control-sm rounded-0 w-100 text-end" name="percentage[]" value="<?php echo (isset($data[$row['component_id']])) ? $data[$row['component_id']] : 0 ?>" required>
                     </td>
                 </tr>
-                <?php endwhile; ?>
+                <?php 
+                    endwhile; 
+                endif;
+                ?>
                 <tfoot>
                     <tr>
                         <th class="py-0 px-1 text-center">Total</th>

@@ -21,11 +21,15 @@ if($qry && $qry instanceof mysqli_result && ($row = $qry->fetch_array())){
                         <select name="class_id" id="class_id" class="form-select form-select-sm rounded-0 select2" required>
                             <option <?php echo (!isset($class_id)) ? 'selected' : '' ?> disabled>Please Select Here</option>
                             <?php
-                            $dept_qry = $conn->query("SELECT c.*, CONCAT(s.name , ' ' , c.grade , ' - ' , c.section) as `class` FROM `class_list` c inner join `subjects` s on c.subject_id = s.subject_id order by `class` asc");
-                            while($row= $dept_qry->fetch_assoc()):
+                            $dept_qry = $conn ? $conn->query("SELECT c.*, CONCAT(s.name , ' ' , c.grade , ' - ' , c.section) as `class` FROM `class_list` c inner join `subjects` s on c.subject_id = s.subject_id order by `class` asc") : false;
+                            if($dept_qry && $dept_qry instanceof mysqli_result):
+                                while($row= $dept_qry->fetch_assoc()):
                             ?>
                                 <option value="<?php echo $row['class_id'] ?>" <?php echo (isset($class_id) && $class_id == $row['class_id'] ) ? 'selected' : '' ?>><?php echo $row['class'] ?></option>
-                            <?php endwhile; ?>
+                            <?php 
+                                endwhile; 
+                            endif;
+                            ?>
                         </select>
                     </div>
                     <div class="form-group">

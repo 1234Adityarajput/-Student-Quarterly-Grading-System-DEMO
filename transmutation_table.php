@@ -25,15 +25,19 @@
                     </thead>
                     <tbody>
                         <?php 
-                        $transmutaion_query = $conn->query("SELECT * FROM `transmutation_table` order by CAST(grade as integer) asc");
-                        while($row = $transmutaion_query->fetch_assoc()):
+                        $transmutaion_query = $conn ? $conn->query("SELECT * FROM `transmutation_table` order by CAST(grade as SIGNED) asc") : false;
+                        if($transmutaion_query && $transmutaion_query instanceof mysqli_result):
+                            while($row = $transmutaion_query->fetch_assoc()):
                         ?>
                         <tr class="trans-item">
                             <td class="px-1 py-0 text-center from"><?php echo $row['from'] ?></td>
                             <td class="px-1 py-0 text-center to"><?php echo $row['to'] ?></td>
                             <td class="px-1 py-0 text-center"><?php echo $row['grade'] ?></td>
                         </tr>
-                        <?php endwhile; ?>
+                        <?php 
+                            endwhile; 
+                        endif;
+                        ?>
                     </tbody>
                 </table>
             </div>
